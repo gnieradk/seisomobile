@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>SeisMob Web Control</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./static/bootstrap/css/bootstrap.min.css">
+<script src="./static/robotwebtools/eventemitter2.min.js"></script>
+<script src="./static/roslibjs/roslib.js"></script>
+<style>
+    /* Some custom styles to beautify this example */
+    .row{     
+        margin-top: 1rem;
+        background: #dbdfe5;
+    }
+    
+    [class^=col]{
+        padding: 10px 15px;
+        background: #abb1b8;
+        border: 1px solid rgba(0,0,0,0.5)
+
+    
+}
+input[type=range] {
+	-webkit-appearance: none;
+	margin: 20px 0;
+	width: 100%;
+}
+input[type=range]:focus {
+	outline: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+	width: 100%;
+	height: 4px;
+	cursor: pointer;
+	animate: 0.2s;
+	background: #03a9f4;
+	border-radius: 25px;
+}
+input[type=range]::-webkit-slider-thumb {
+	height: 20px;
+	width: 20px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 0 4px 0 rgba(0,0,0, 1);
+	cursor: pointer;
+	-webkit-appearance: none;
+	margin-top: -8px;
+}
+input[type=range]:focus::-webkit-slider-runnable-track {
+	background: #03a9f4;
+}
+.range-wrap{
+	width: 500px;
+	position: relative;
+}
+.range-value{
+	position: absolute;
+	top: -50%;
+}
+.range-value span{
+	width: 30px;
+	height: 24px;
+	line-height: 24px;
+	text-align: center;
+	background: #03a9f4;
+	color: #fff;
+	font-size: 16px;
+	display: block;
+	position: absolute;
+	left: 50%;
+	transform: translate(-50%, 0);
+	border-radius: 6px;
+}
+.range-value span:before{
+	content: "";
+	position: absolute;
+	width: 0;
+	height: 0;
+	border-top: 10px solid #03a9f4;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	top: 100%;
+	left: 50%;
+	margin-left: -5px;
+	margin-top: -1px;
+}
+ 
+    
+</style>
+
+<script>
+var ros = new ROSLIB.Ros();
+
+  // If there is an error on the backend, an 'error' emit will be emitted.
+  ros.on('error', function(error) {
+    document.getElementById('connecting').style.display = 'none';
+    document.getElementById('connected').style.display = 'none';
+    document.getElementById('closed').style.display = 'none';
+    document.getElementById('error').style.display = 'inline';
+    console.log(error);
+  });
+
+  // Find out exactly when we made a connection.
+  ros.on('connection', function() {
+    console.log('Connection made!');
+    document.getElementById('connecting').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('closed').style.display = 'none';
+    document.getElementById('connected').style.display = 'inline';
+  });
+
+  ros.on('close', function() {
+    console.log('Connection closed.');
+    document.getElementById('connecting').style.display = 'none';
+    document.getElementById('connected').style.display = 'none';
+    document.getElementById('closed').style.display = 'inline';
+  });
+
+  // Create a connection to the rosbridge WebSocket server.
+  ros.connect('ws://192.168.8.143:9090');
+
+</script>
+
+<script>
+  // First, we create a Service client with details of the service's name and service type.
+  var wheelsSettingsClient = new ROSLIB.Service({
+    ros : ros,
+    name : '/wheels_settings_server',
+    serviceType : 'seismob_wheels_driver/WheelsSettings'
+  });
+  
+var buttons_dictionary = {
+	  start: false,
+	  forward: false,
+	  right: false, 
+	  left: false,
+	  backward: false,
+	  stop: false
+  };
+
+</script>
+
+</head>
+
+<body>
+	<div style="height: 50px"></div>
+
+<div class="row d-flex justify-content-center">
+
+  <div id="statusIndicator">
+    <p id="connecting">
+      Connecting to rosbridge...
+    </p>
+    <p id="connected" style="color:#00D600; display:none">
+      Connected
+    </p>
+    <p id="error" style="color:#FF0000; display:none">
+      Error in the backend!
+    </p>
+    <p id="closed" style="display:none">
+      Connection closed.
+    </p>
+  </div>
+</div>
+
+<!--
+Very nice slider css trick which allow to print current slider value over it
+https://css-tricks.com/value-bubbles-for-range-inputs/
+https://css-tricks.com/value-bubbles-for-range-inputs/
+-->
+<div class="row d-flex justify-content-center">
+<span class="font-weight-bold purple-text mr-2 mt-1">Wheels Speed</span>
+</div>
+
+<div class="row d-flex justify-content-center">
+
+	 <span class="font-weight-bold purple-text mr-2 mt-1">0</span>
+	<div class="range-wrap">
+		<div class="range-value" id="rangeV"></div>
+		<input id="range" type="range" min="0" max="100" value="0" step="1">
+	</div>
+	  <span class="font-weight-bold purple-text ml-2 mt-1">100</span>
+</div>
+
+<!--
+<div class="row d-flex justify-content-center">    
+  <span class="font-weight-bold purple-text mr-2 mt-1">0</span>
+    <input class="slider" type="range" min="0" max="100" />
+  <span class="font-weight-bold purple-text ml-2 mt-1">100</span>
+</div>
+--> 
+
+ 
+ </div>
+
+  <div class="row d-flex justify-content-center">
+	<button id="demo" type="button" class="btn btn-default btn-success col-md-5" onclick="startButton()">Start</button>
+  
+  </div>        
+  <div class="row d-flex justify-content-center"> 
+    
+      <button type="button" class="btn btn-default col-md-2" onclick="forwardButton()">
+		<img src="./assets/Forward_1.png" height="50"/><span class="my-auto" style="vertical-align: middle;">Forward</span>
+      </button>
+  </div>
+  
+  <div class="row justify-content-center">
+      <button type="button" class="btn btn-default col-md-2 my-auto" onclick="leftButton()">
+		  <img src="./assets/Left_1.png" height="50"/>
+	  <span style="vertical-align: middle;">Left</span>	  
+		  
+	</button>
+      
+<!--      <button type="button" class="btn btn-default col-md-6">Button 5</button> -->
+	  <img src="./assets/Robot.png" height="300"/>
+      <button type="button" class="btn btn-default col-md-2 my-auto" onclick="rightButton()">
+	  <span style="vertical-align: middle;">Right</span>
+	  <img src="./assets/Right_1.png" height="50" />  
+     </button>
+  </div>
+  
+  <div class="row d-flex justify-content-center">
+      <button type="button" class="btn btn-default col-md-2" onclick="backwardButton()">
+	  <img src="./assets/Backward_1.png" height="50"/>
+	  <span style="vertical-align: middle;">Backward</span>
+	  </button>
+  </div>
+  <div class="row d-flex justify-content-center">
+  <button type="button" class="btn btn-default btn-danger col-md-5" onclick="stopButton()">Stop</button>
+  </div>
+  
+</div>
+
+<div class="row d-flex justify-content-center">
+<div class="col-md-5" style="text-align: center;">
+<p>Current speed value: <span id="sliderdemo"></span></p>
+<p id="start_state">Start status: Unknown</p>
+<p id="stop_state">Stop status: Unknown</p>
+<p id="direction_state">Direction state: Unknown</p>
+</div>
+</div>
+
+<script>
+var slider = document.getElementById("range");
+var output = document.getElementById("sliderdemo");
+output.innerHTML = slider.value;
+
+slider.oninput = function() {
+  output.innerHTML = this.value;
+  
+  var action = Object.keys(buttons_dictionary).filter(function(key){
+	  return buttons_dictionary[key] == true})[0];
+	  
+  switch(action){
+	  case undefined:
+	  console.log('Action: undefined!')
+	  break;
+	  case 'start':
+	  console.log('Action: start!')
+	  break;
+	  case 'forward':
+	  forwardRequest();
+	  console.log('Action: forward!')
+	  break;
+	  case 'backward':
+	  backwardRequest();
+	  console.log('Action: backward!')
+	  break;
+	  case 'right':
+	  console.log('Action: right!')
+	  break;
+	  case 'left':
+	  console.log('Action: left!')
+	  break;
+	  case 'stop':
+	  console.log('Action: stop!')
+	  break;
+	  default:
+	  console.log('Ups! Action not defined!')
+  }
+
+
+/*
+// console.log(buttons_dictionary);
+for (var key in buttons_dictionary){
+	if (buttons_dictionary[key] == true)
+	{
+		console.log(key);
+		console.log(buttons_dictionary[key]);
+		break;
+	} else {
+	console.log('Ups - something went very wrong!');
+	}
+}
+*/
+}
+	
+function startButton() {
+
+  for (var key in buttons_dictionary){
+	  buttons_dictionary[key] = false;
+//	  console.log(buttons_dictionary['key']);
+//	  console.log(buttons_dictionary['key'])
+    //key will be -> 'id'
+    //dictionary[key] -> 'value'
+}
+  buttons_dictionary['start'] = true;
+  console.log(buttons_dictionary);
+
+  document.getElementById("start_state").innerHTML = "Start status: Started";
+  document.getElementById("stop_state").innerHTML = "Stop status: Unknown";
+  
+  startRequest();
+}
+
+function wait(ms){
+   var start = new Date().getTime();
+   var end = start;
+   while(end < start + ms) {
+     end = new Date().getTime();
+  }
+}
+
+function startRequest() {
+  
+var empty_speeds = [0, 0, 0, 0]  
+var test_speeds = [25, 25, 25, 25]
+test_directions = ['dummy', 'dummy', 'dummy', 'dummy']
+
+const test_directions_table = [
+	['forward',  'forward',  'forward',  'forward'],
+	['backward', 'backward', 'backward', 'backward'],
+	['forward',  'backward', 'forward',  'backward'],
+	['backward', 'forward',  'backward', 'forward']
+	];
+
+
+for (let row = 0; row < 4; row++){
+	for (let column =0; column <4; column++){
+//	console.log(test_directions_table[row][column])
+	test_directions[column] = test_directions_table[row][column]
+}
+	console.log(test_directions)
+
+
+/*
+for(var i = 0; i < 4; i++){
+	  for (var j = 0; j < test_speeds.length; j++){
+	  start_speeds[i] = test_speeds[j];
+	  wait(1000);
+ 
+  
+  var start_request = new ROSLIB.ServiceRequest({
+	directions:['forward', 'forward', 'forward', 'forward'],
+	speeds: start_speeds
+		
+ });
+	wheelsSettingsClient.callService(start_request, function(result){
+//		console.log(result)
+		console.log('Result for wheels servie call on' + wheelsSettingsClient.name + ':' + result.status);
+	});
+
+	  
+	  	  wait(1000);
+	  console.log(start_speeds);
+  }
+  var start_speeds = [0, 0, 0, 0] 
+}
+*/  
+
+
+ var start_request = new ROSLIB.ServiceRequest({
+	directions: test_directions,
+	speeds: test_speeds
+		
+ });
+	wheelsSettingsClient.callService(start_request, function(result){
+//		console.log(result)
+		console.log('Result for wheels servie call on' + wheelsSettingsClient.name + ':' + result.status);
+	});
+		wait(1000);
+ }
+ console.log('Final step')
+ var start_request = new ROSLIB.ServiceRequest({
+	directions: ['forward', 'forward', 'forward', 'forward'],
+	speeds: empty_speeds
+		
+ });
+	wheelsSettingsClient.callService(start_request, function(result){
+//		console.log(result)
+		console.log('Result for wheels servie call on' + wheelsSettingsClient.name + ':' + result.status);
+	});
+
+}
+ 
+function stopButton() {
+	  for (var key in buttons_dictionary){
+	  buttons_dictionary[key] = false;
+//	  console.log(buttons_dictionary['key']);
+//	  console.log(buttons_dictionary['key'])
+    //key will be -> 'id'
+    //dictionary[key] -> 'value'
+}
+	buttons_dictionary['stop'] = true;
+	
+	
+	document.getElementById("start_state").innerHTML = "Start status: Unknown";
+	document.getElementById("stop_state").innerHTML = "Stop status: Stopped";
+	
+	stopRequest();
+}
+
+
+function stopRequest() {
+	var current_speed = parseInt(slider.value, 10);
+	console.log(current_speed)
+	
+	var forward_request = new ROSLIB.ServiceRequest({
+	directions:['forward', 'forward', 'forward', 'forward'],
+	speeds: [0, 0, 0, 0]
+		
+ });
+ 
+	wheelsSettingsClient.callService(forward_request, function(result){
+		console.log('Result for wheels servie call on' + wheelsSettingsClient.name + ':' + result.status);
+	});
+	
+}
+	
+
+function forwardButton() {
+	
+	  for (var key in buttons_dictionary){
+	  buttons_dictionary[key] = false;
+//	  console.log(buttons_dictionary)
+    //key will be -> 'id'
+    //dictionary[key] -> 'value'
+}
+	buttons_dictionary['forward'] = true;
+//	console.log(buttons_dictionary)
+	
+	document.getElementById("direction_state").innerHTML = "Direction state: Forward";
+	
+	forwardRequest();
+}
+
+function forwardRequest() {
+	var current_speed = parseInt(slider.value, 10);
+	console.log(current_speed)
+	
+	var forward_request = new ROSLIB.ServiceRequest({
+	directions:['forward', 'forward', 'forward', 'forward'],
+	speeds: [current_speed, current_speed, current_speed, current_speed]
+		
+ });
+ 
+	wheelsSettingsClient.callService(forward_request, function(result){
+		console.log('Result for wheels servie call on' + wheelsSettingsClient.name + ':' + result.status);
+	});
+	
+}
+
+function backwardButton() {
+	for (var key in buttons_dictionary){
+	  buttons_dictionary[key] = false;
+//	  console.log(buttons_dictionary)
+    //key will be -> 'id'
+    //dictionary[key] -> 'value'
+}
+	buttons_dictionary['backward'] = true;
+	
+	document.getElementById("direction_state").innerHTML = "Direction state: Backward";
+	backwardRequest()
+}
+
+function backwardRequest() {
+	var current_speed = parseInt(slider.value, 10);
+	console.log(current_speed)
+	
+	var forward_request = new ROSLIB.ServiceRequest({
+	directions:['backward', 'backward', 'backward', 'backward'],
+	speeds: [current_speed, current_speed, current_speed, current_speed]
+		
+ });
+ 
+	wheelsSettingsClient.callService(forward_request, function(result){
+		console.log('Result for wheels servie call on' + wheelsSettingsClient.name + ':' + result.status);
+	});
+	
+}
+
+function rightButton() {
+	document.getElementById("direction_state").innerHTML = "Direction state: Right";
+}
+
+function leftButton() {
+	document.getElementById("direction_state").innerHTML = "Direction state: Left";
+}
+
+</script>
+
+<script>
+const
+	range = document.getElementById('range'),
+	rangeV = document.getElementById('rangeV'),
+	setValue = ()=>{
+		const
+			newValue = Number( (range.value - range.min) * 100 / (range.max - range.min) ),
+			newPosition = 10 - (newValue * 0.2);
+		rangeV.innerHTML = `<span>${range.value}</span>`;
+		rangeV.style.left = `calc(${newValue}% + (${newPosition}px))`;
+	};
+document.addEventListener("DOMContentLoaded", setValue);
+range.addEventListener('input', setValue);
+
+</script>
+
+
+</body>
+</html>
+
+<!--
+https://stackoverflow.com/questions/32800224/is-it-possible-to-have-buttons-with-different-widths-while-using-bootstraps-btn
+https://codepen.io/jfgilbert/pen/LppbLz
+
+https://www.w3schools.com/howto/howto_js_rangeslider.asp
+
+Calling roslibjs ROS service
+http://wiki.ros.org/roslibjs/Tutorials/BasicRosFunctionality
+-->

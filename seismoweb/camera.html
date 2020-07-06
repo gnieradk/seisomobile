@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>SeisMob Web Control</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="./static/bootstrap/css/bootstrap.min.css">
+</head>
+
+
+
+<body>
+<h1 class="text-center"></center>Camera Stream View</h1>
+
+
+<div class="container bg-light">
+<div class="row my-4">
+    <div class="col d-flex justify-content-center">
+        <img src="http://192.168.8.143:8080/stream/video.mjpeg" class="p-1 bg-dark" alt="" id="video" 
+			 width="960" height="450"/>
+    </div>
+</div>
+</div>
+
+<!--
+<script>
+window.onload = function() {
+	var robot_IP = "192.168.8.143"
+	video = document.getElementById('video');
+	video.src = "http://" + robot_IP + ":8080/stream/video.mjpeg"
+};
+</script>
+-->
+
+</body>
+</html>
+
+
+
